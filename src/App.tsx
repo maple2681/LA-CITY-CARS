@@ -51,13 +51,12 @@ const safeSessionStorage = {
   removeItem: (key: string) => { try { sessionStorage.removeItem(key); } catch(e) {} }
 };
 
-const compressImageFile = (file: File, maxWidth: number = 800): Promise<string> => {
+const compressImageFile = (file: File, maxWidth: number = 1920): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement("canvas");
         let width = img.width;
         let height = img.height;
         
@@ -66,6 +65,7 @@ const compressImageFile = (file: File, maxWidth: number = 800): Promise<string> 
           width = maxWidth;
         }
         
+        const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
@@ -74,8 +74,17 @@ const compressImageFile = (file: File, maxWidth: number = 800): Promise<string> 
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        // Compress using standard jpeg format with 0.7 quality
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
+        
+        let quality = 0.95;
+        let dataUrl = canvas.toDataURL("image/jpeg", quality);
+        
+        // Ensure the base64 string does not exceed 3MB (~4 million chars in base64, but keeping under 3,000,000 for safety)
+        while (dataUrl.length > 3000000 && quality > 0.5) {
+          quality -= 0.1;
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
+        
+        resolve(dataUrl);
       };
       img.onerror = () => reject(new Error("Failed to load image for compression"));
       img.src = event.target?.result as string;
@@ -288,7 +297,7 @@ export default function App() {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const compressedBase64 = await compressImageFile(file, 1200);
+        const compressedBase64 = await compressImageFile(file, 1920);
         setHeroImage(compressedBase64);
         try {
           localStorage.setItem("la_city_cars_hero_img", compressedBase64);
@@ -364,7 +373,7 @@ export default function App() {
       try {
         const newImages: string[] = [];
         for (const file of fileArray) {
-          const compressed = await compressImageFile(file, 800);
+          const compressed = await compressImageFile(file, 1920);
           newImages.push(compressed);
         }
         setFormSpinImages((prev) => [...prev, ...newImages]);
@@ -382,7 +391,7 @@ export default function App() {
         );
         const newImages: string[] = [];
         for (const file of fileArray) {
-          const compressed = await compressImageFile(file, 800);
+          const compressed = await compressImageFile(file, 1920);
           newImages.push(compressed);
         }
         setFormImages((prev) => [...prev, ...newImages]);
