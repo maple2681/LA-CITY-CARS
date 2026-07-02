@@ -258,11 +258,20 @@ export default function VehicleDetailView({
           id="vehicle-detail-drawer"
         >
           {/* Header Bar */}
-          <div className="flex items-center justify-between px-8 py-5 border-b border-stone-200/50 shrink-0">
-            <div className="flex items-center gap-3">
-              <span className="bg-stone-900 text-stone-100 text-[10px] font-mono font-bold uppercase tracking-widest px-3 py-1 rounded-full">
-                {isAdmin ? "ADMIN VEHICLE AUDIT" : "VEHICLE INFORMATION"}
-              </span>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-stone-200/50 shrink-0 gap-3 md:gap-0">
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 w-full md:w-auto">
+              <div className="flex justify-between w-full md:w-auto items-center">
+                <span className="bg-stone-900 text-stone-100 text-[10px] font-mono font-bold uppercase tracking-widest px-3 py-1 rounded-full shrink-0">
+                  {isAdmin ? "ADMIN VEHICLE AUDIT" : "VEHICLE INFORMATION"}
+                </span>
+                <button
+                  onClick={onClose}
+                  className="md:hidden p-1 hover:bg-stone-100 rounded-full text-stone-500 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  title="Close Panel"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
               <span className="text-stone-400 text-xs font-mono">
                 Stock ID:{" "}
                 <strong className="text-stone-700 uppercase">
@@ -271,15 +280,7 @@ export default function VehicleDetailView({
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              {!isAdmin && (
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 border border-stone-200 hover:bg-stone-950 hover:text-white rounded-full text-xs font-bold uppercase tracking-wider text-stone-700 transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  ← Back to Showroom
-                </button>
-              )}
+            <div className="hidden md:flex items-center gap-3">
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-stone-100 rounded-full text-stone-500 hover:text-stone-900 transition-all cursor-pointer flex items-center justify-center"
@@ -292,10 +293,10 @@ export default function VehicleDetailView({
           </div>
 
           {/* Core scrollable layout */}
-          <div className="flex-1 overflow-y-auto p-8 space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 sm:space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
               {/* Left Main Content Pane */}
-              <div className="lg:col-span-8 space-y-8">
+              <div className="lg:col-span-8 space-y-6 sm:space-y-8">
                 {/* 1. Brand/Model Typographic Hierarchy & Pricing Section */}
                 <div className="space-y-4" id="vehicle-detail-title-card">
                   <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
@@ -367,9 +368,35 @@ export default function VehicleDetailView({
 
                 {/* 2. Premium Media Gallery */}
                 <div className="space-y-4" id="vehicle-media-gallery">
+                  {/* Mobile Mode Toggle */}
+                  <div className="flex md:hidden bg-stone-100 p-1 rounded-full items-center justify-between shadow-sm border border-stone-200">
+                    <button
+                      onClick={() => setMediaMode("images")}
+                      className={`flex-1 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        mediaMode === "images"
+                          ? "bg-stone-900 text-white"
+                          : "text-stone-500 hover:text-stone-800"
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Gallery</span>
+                    </button>
+                    <button
+                      onClick={() => setMediaMode("360")}
+                      className={`flex-1 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        mediaMode === "360"
+                          ? "bg-stone-900 text-white"
+                          : "text-stone-500 hover:text-stone-800"
+                      }`}
+                    >
+                      <Compass className="w-3.5 h-3.5" />
+                      <span>360°</span>
+                    </button>
+                  </div>
+
                   <div className="relative aspect-video w-full bg-stone-950 rounded-3xl overflow-hidden border border-stone-200 shadow-lg group">
-                    {/* Mode Toggle Button Overlay */}
-                    <div className="absolute top-4 right-4 z-20 flex bg-stone-950/80 backdrop-blur-md rounded-full p-1 border border-white/10 shadow-md">
+                    {/* Mode Toggle Button Overlay (Desktop Only) */}
+                    <div className="hidden md:flex absolute top-4 right-4 z-20 bg-stone-950/80 backdrop-blur-md rounded-full p-1 border border-white/10 shadow-md">
                       <button
                         onClick={() => setMediaMode("images")}
                         className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -427,13 +454,16 @@ export default function VehicleDetailView({
                           onMouseMove={handleMouseMove}
                           onMouseUp={handleMouseUpOrLeave}
                           onMouseLeave={handleMouseUpOrLeave}
+                          onTouchStart={handleMouseDown}
+                          onTouchMove={handleMouseMove}
+                          onTouchEnd={handleMouseUpOrLeave}
                           className="w-full h-full relative cursor-grab active:cursor-grabbing select-none flex items-center justify-center overflow-hidden bg-stone-900"
                         >
-                          <div className="absolute top-4 left-4 font-mono text-[9px] text-white bg-stone-950/90 px-2.5 py-1 rounded-md tracking-widest flex items-center gap-1 z-10">
+                          <div className="hidden md:flex absolute top-4 left-4 font-mono text-[9px] text-white bg-stone-950/90 px-2.5 py-1 rounded-md tracking-widest items-center gap-1 z-10">
                             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
                             <span>PHOTO-SPIN 360° ACTIVE</span>
                           </div>
-                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-mono text-stone-300 bg-stone-950/80 px-4 py-2 rounded-full tracking-wider border border-white/10 pointer-events-none text-center z-10">
+                          <div className="hidden md:block absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-mono text-stone-300 bg-stone-950/80 px-4 py-2 rounded-full tracking-wider border border-white/10 pointer-events-none text-center z-10">
                             Drag horizontally to rotate vehicle
                           </div>
                           {car.spinImages.map((src, i) => (
@@ -463,6 +493,12 @@ export default function VehicleDetailView({
                       </div>
                     )}
                   </div>
+                  
+                  {mediaMode === "360" && car.spinImages && car.spinImages.length > 0 && spinImagesLoaded && (
+                    <div className="md:hidden text-center text-[10px] font-mono text-stone-500 uppercase tracking-widest pt-1">
+                      ← Swipe horizontally to rotate →
+                    </div>
+                  )}
 
                   {/* 4-photo minimal secondary grid */}
                   {mediaMode === "images" && (
