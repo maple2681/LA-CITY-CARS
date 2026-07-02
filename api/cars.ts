@@ -8,7 +8,8 @@ function getPool() {
     try {
       pool = new Pool({ connectionString: process.env.DATABASE_URL });
     } catch (err) {
-      console.warn("Failed to initialize Neon pool:", err);
+      console.error("Failed to initialize Neon pool:", err);
+      throw err;
     }
   }
   return pool;
@@ -17,18 +18,14 @@ function getPool() {
 async function initDB() {
   const p = getPool();
   if (!p) {
-    return;
+    throw new Error("DATABASE_URL is not set");
   }
-  try {
-    await p.query(`
-      CREATE TABLE IF NOT EXISTS cars (
-        id TEXT PRIMARY KEY,
-        data JSONB
-      )
-    `);
-  } catch (err) {
-    console.warn("Database initialization failed:", err);
-  }
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS cars (
+      id TEXT PRIMARY KEY,
+      data JSONB
+    )
+  `);
 }
 
 export default async function handler(req: any, res: any) {
@@ -38,23 +35,25 @@ export default async function handler(req: any, res: any) {
     }
     await dbInitialized;
   } catch (err: any) {
-    console.warn("DB Initialization error:", err);
+    console.error("DB Initialization error:", err);
+    return res.status(500).json({ error: err.message || "Unknown DB Error" });
   }
 
   const p = getPool();
+  if (!p) {
+    return res.status(500).json({ error: "Database not connected" });
+  }
+
   const method = req.method;
 
   if (method === "GET") {
-    if (!p) {
-      return res.status(200).json([]);
-    }
     try {
       const { rows } = await p.query("SELECT data FROM cars");
       const cars = rows.map((r: any) => typeof r.data === 'string' ? JSON.parse(r.data) : r.data);
       return res.status(200).json(cars);
     } catch (err: any) {
       console.error("Neon GET error:", err);
-      return res.status(200).json([]); // Fallback on error
+      return res.status(500).json({ error: err.message || "Unknown DB Error" });
     }
   }
 
@@ -71,10 +70,6 @@ export default async function handler(req: any, res: any) {
       car.id = `car-${Date.now()}`;
     }
 
-    if (!p) {
-      return res.status(500).json({ error: "Database not connected" });
-    }
-
     try {
       const carDataString = JSON.stringify(car);
       await p.query(
@@ -84,7 +79,7 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ success: true, id: car.id });
     } catch (err: any) {
       console.error("Neon POST error:", err);
-      return res.status(500).json({ error: "Failed to save to db" });
+      return res.status(500).json({ error: err.message || "Unknown DB Error" });
     }
   }
 
@@ -94,16 +89,12 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Car ID is required for deletion" });
     }
 
-    if (!p) {
-      return res.status(500).json({ error: "Database not connected" });
-    }
-
     try {
       await p.query("DELETE FROM cars WHERE id = $1", [id]);
       return res.status(200).json({ success: true });
     } catch (err: any) {
       console.error("Neon DELETE error:", err);
-      return res.status(500).json({ error: "Failed to delete" });
+      return res.status(500).json({ error: err.message || "Unknown DB Error" });
     }
   }
 
