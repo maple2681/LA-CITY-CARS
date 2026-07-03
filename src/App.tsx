@@ -411,21 +411,26 @@ export default function App() {
     if (!deleteConfirm) return;
     const { type, id, title } = deleteConfirm;
     
-    // Instant removal UI
     setDeleteConfirm(null);
 
     if (type === "car") {
-      setCars((prevCars) => prevCars.filter((c) => c.id !== id));
-      showToast(`Removed vehicle from active fleet.`);
-      
       try {
-        const res = await fetch(`/api/cars/${id}`, { method: "DELETE", credentials: "include" });
+        const res = await fetch(`/api/cars?id=${id}`, { method: "DELETE", credentials: "include" });
         if (!res.ok) {
-          showToast("Failed to delete vehicle on server.", "error");
-          loadFleet();
+          let errMsg = "Unknown error";
+          try {
+            const errData = await res.json();
+            errMsg = errData.error || errData.message || res.statusText;
+          } catch(e) {
+            errMsg = res.statusText;
+          }
+          throw new Error(errMsg);
         }
-      } catch (e) {
-        showToast("Network error while deleting.", "error");
+        setCars((prevCars) => prevCars.filter((c) => c.id !== id));
+        showToast(`Removed vehicle from active fleet.`);
+        loadFleet();
+      } catch (e: any) {
+        alert(e.message || "Failed to delete vehicle");
         loadFleet();
       }
     }
@@ -436,28 +441,28 @@ export default function App() {
     setEditingCar(null);
     setFormBrand("");
     setFormModel("");
-    setFormYear(2024);
-    setFormCategory("Coupe");
-    setFormPrice(85000);
-    setFormEstMonthly(1100);
+    setFormYear(new Date().getFullYear());
+    setFormCategory("");
+    setFormPrice(0);
+    setFormEstMonthly(0);
     setFormImage("");
     setFormImages([]);
-    setFormMileage("1,200 mi");
-    setFormFuelType("Petrol");
-    setFormTransmission("Auto");
+    setFormMileage("");
+    setFormFuelType("");
+    setFormTransmission("");
 
     // Reset extended fields
-    setFormMsrp(94500);
-    setFormDriveType("Rear-Wheel Drive (RWD)");
-    setFormExteriorColor("Obsidian Metallic");
-    setFormInteriorColor("Ebony Premium Leather");
+    setFormMsrp(0);
+    setFormDriveType("");
+    setFormExteriorColor("");
+    setFormInteriorColor("");
     setFormVin("");
     setFormStockNumber("");
     setFormDescription("");
-    setFormHasAudioPackage(true);
-    setFormHasDrivingAssists(true);
-    setFormHasClimateControl(true);
-    setFormHasSafetySuite(true);
+    setFormHasAudioPackage(false);
+    setFormHasDrivingAssists(false);
+    setFormHasClimateControl(false);
+    setFormHasSafetySuite(false);
     setFormSpinImages([]);
     
     // EV & Legal fields
@@ -496,27 +501,10 @@ export default function App() {
             ? "Rear-Wheel Drive (RWD)"
             : "Front-Wheel Drive (FWD)"),
     );
-    setFormExteriorColor(
-      car.exteriorColor ||
-        (car.id === "lexus-ct-200h" ? "Silver Metallic" : "Obsidian Metallic"),
-    );
-    setFormInteriorColor(
-      car.interiorColor ||
-        (car.id === "lexus-ct-200h"
-          ? "Ebony Premium Leather"
-          : "Alcantara Gray"),
-    );
-    setFormVin(
-      car.vin || "JTDKNRAU4H21" + (14432 + Math.floor(car.price / 10)),
-    );
-    setFormStockNumber(
-      car.stockNumber ||
-        "LA-" +
-          (car.brand ? car.brand.slice(0, 3).toUpperCase() : "UNK") +
-          "-" +
-          ((car.year || 0) % 100) +
-          "A",
-    );
+    setFormExteriorColor(car.exteriorColor || "");
+    setFormInteriorColor(car.interiorColor || "");
+    setFormVin(car.vin || "");
+    setFormStockNumber(car.stockNumber || "");
     setFormDescription(car.description || "");
     setFormHasAudioPackage(car.hasAudioPackage !== false);
     setFormHasDrivingAssists(car.hasDrivingAssists !== false);
@@ -544,8 +532,7 @@ export default function App() {
     const mPart = (formModel || "car").toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const generatedId = editingCar ? editingCar.id : `car-${bPart}-${mPart}-${Date.now()}`;
 
-    const defaultImg = "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=800";
-    const sanitizedImage = formImages.length > 0 ? formImages[0] : (formImage || defaultImg);
+    const sanitizedImage = formImages.length > 0 ? formImages[0] : (formImage || "");
 
     const carPayload: Car = {
       id: generatedId,
@@ -556,7 +543,7 @@ export default function App() {
       price: Number(formPrice) || 0,
       estMonthly: Number(formEstMonthly) || 0,
       image: sanitizedImage,
-      images: formImages.length > 0 ? formImages : [sanitizedImage],
+      images: formImages || [],
       mileage: formMileage || "0",
       fuelType: formFuelType || "Gasoline",
       transmission: formTransmission || "Automatic",
@@ -580,13 +567,6 @@ export default function App() {
       standardEquipment: formStandardEquipment || "",
     };
 
-    // Update frontend state directly for optimistic UI
-    if (editingCar) {
-      setCars((prev) => prev.map((c) => (c.id === generatedId ? carPayload : c)));
-    } else {
-      setCars((prev) => [carPayload, ...prev]);
-    }
-
     try {
       const res = await fetch("/api/cars", {
         method: "POST",
@@ -595,19 +575,26 @@ export default function App() {
         credentials: "include"
       });
       
-      if (res.ok) {
-        showToast("Successfully saved vehicle globally.");
-        await loadFleet();
-      } else {
-        showToast("Failed to save vehicle on server.", "error");
+      if (!res.ok) {
+        let errMsg = "Unknown error";
+        try {
+          const errData = await res.json();
+          errMsg = errData.error || errData.message || res.statusText;
+        } catch(e) {
+          errMsg = res.statusText;
+        }
+        throw new Error(errMsg);
       }
-    } catch (err) {
-      console.error("Optimistic mode: backend update was not completed but local state is preserved", err);
-      showToast("Network error while saving.", "error");
+      
+      showToast("Successfully saved vehicle globally.");
+      await loadFleet();
+      setIsCrudModalOpen(false);
+      setIsSaving(false);
+    } catch (err: any) {
+      console.error("Failed to save car:", err);
+      alert(err.message || "Failed to save car");
+      setIsSaving(false);
     }
-
-    setIsCrudModalOpen(false);
-    setIsSaving(false);
   };
 
   // Delete Operation
@@ -804,12 +791,18 @@ export default function App() {
     >
       {/* Visual Card Image Header */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100">
-        <img
-          src={car.image}
-          alt={`${car.brand} ${car.model}`}
-          className="w-full h-full object-cover transition-transform duration-[1000ms] ease-out group-hover:scale-[1.08]"
-          referrerPolicy="no-referrer"
-        />
+        {car.image ? (
+          <img
+            src={car.image}
+            alt={`${car.brand} ${car.model}`}
+            className="w-full h-full object-cover transition-transform duration-[1000ms] ease-out group-hover:scale-[1.08]"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-full h-full bg-stone-200 flex items-center justify-center text-stone-400 text-xs font-mono uppercase">
+            No Image Provided
+          </div>
+        )}
         {/* Premium spec tags overlay */}
         <div className="absolute top-4 left-4 flex gap-1.5">
           <span className="bg-stone-950/80 backdrop-blur-xs text-[9px] font-mono tracking-widest text-white uppercase px-2.5 py-1 rounded-md">
@@ -2622,13 +2615,26 @@ export default function App() {
                               setFormSpinImages(newImages);
                               setDraggedSpinImgIdx(null);
                             }}
-                            className={`flex-shrink-0 w-16 h-16 border border-stone-200 rounded overflow-hidden snap-center cursor-move ${draggedSpinImgIdx === i ? 'opacity-50' : 'opacity-100'}`}
+                            className={`relative flex-shrink-0 w-16 h-16 border border-stone-200 rounded overflow-hidden snap-center cursor-move group ${draggedSpinImgIdx === i ? 'opacity-50' : 'opacity-100'}`}
                           >
                             <img
                               src={img}
                               alt={`frame ${i}`}
                               className="w-full h-full object-cover"
                             />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newImages = formSpinImages.filter((_, idx) => idx !== i);
+                                setFormSpinImages(newImages);
+                              }}
+                              className="absolute top-1 right-1 bg-white/90 text-red-500 rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 shadow-sm"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
                           </div>
                         ))}
                       </div>
