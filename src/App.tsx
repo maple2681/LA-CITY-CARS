@@ -1802,13 +1802,17 @@ export default function App() {
                                 >
                                   {/* Thumbnail and Brand/Model */}
                                   <td className="py-4 px-6 flex items-center gap-4">
-                                    <div className="w-16 h-12 rounded-xl overflow-hidden bg-stone-100 border border-stone-200/50 shrink-0">
-                                      <img
-                                        src={car.image}
-                                        alt={car.brand}
-                                        className="w-full h-full object-cover"
-                                        referrerPolicy="no-referrer"
-                                      />
+                                    <div className="w-16 h-12 rounded-xl overflow-hidden bg-stone-100 border border-stone-200/50 shrink-0 flex items-center justify-center">
+                                      {car.image ? (
+                                        <img
+                                          src={car.image}
+                                          alt={car.brand}
+                                          className="w-full h-full object-cover"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      ) : (
+                                        <span className="text-[8px] uppercase font-mono text-stone-400">No Img</span>
+                                      )}
                                     </div>
                                     <div>
                                       <span className="font-bold text-stone-950 text-sm block group-hover/row:text-amber-700 transition-colors">
