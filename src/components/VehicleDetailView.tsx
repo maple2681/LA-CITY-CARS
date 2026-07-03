@@ -191,14 +191,16 @@ export default function VehicleDetailView({
   }, [car]);
 
   // Handles simple drag rotation simulation for 360 view
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
-    setStartX(e.clientX);
+    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    setStartX(clientX);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDragging || !car.spinImages || car.spinImages.length === 0) return;
-    const diffX = e.clientX - startX;
+    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const diffX = clientX - startX;
 
     // Determine rotation sensitivity based on how many images we have
     // If we have 36 images, maybe a 10px drag is one frame.
@@ -208,7 +210,7 @@ export default function VehicleDetailView({
       const step = diffX > 0 ? 1 : -1;
       const numFrames = car.spinImages.length;
       setPanIndex((prev) => (prev + step + numFrames) % numFrames);
-      setStartX(e.clientX);
+      setStartX(clientX);
     }
   };
 
@@ -456,7 +458,7 @@ export default function VehicleDetailView({
                           onTouchStart={handleMouseDown}
                           onTouchMove={handleMouseMove}
                           onTouchEnd={handleMouseUpOrLeave}
-                          className="w-full h-full relative cursor-grab active:cursor-grabbing select-none flex items-center justify-center overflow-hidden bg-stone-900"
+                          className="w-full h-full relative cursor-grab active:cursor-grabbing select-none touch-none flex items-center justify-center overflow-hidden bg-stone-900"
                         >
                           <div className="hidden md:flex absolute top-4 left-4 font-mono text-[9px] text-white bg-stone-950/90 px-2.5 py-1 rounded-md tracking-widest items-center gap-1 z-10">
                             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
