@@ -60,23 +60,16 @@ export default function VehicleDetailView({
   const [spinImagesLoaded, setSpinImagesLoaded] = useState(false);
   const [spinPreloadProgress, setSpinPreloadProgress] = useState(0);
 
-  // Dynamic original MSRP (read from car spec or fallback)
+  // Dynamic original MSRP
   const msrpPrice = useMemo(() => {
-    if (car.msrp) return car.msrp;
-    if (car.id === "lexus-ct-200h") return 12196;
-    return Math.round(car.price * 1.112);
+    return car.msrp || car.price;
   }, [car]);
 
   // Premium automotive galleries
   const secondaryImages = useMemo(() => {
     return car.images && car.images.length > 0
       ? car.images
-      : [
-          car.image,
-          "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80", // Interior cockpit
-          "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80", // Premium dashboard
-          "https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=800&q=80", // Wheel Detail
-        ];
+      : car.image ? [car.image] : [];
   }, [car]);
 
   // Ensure selected image resets when the car changes
@@ -422,15 +415,21 @@ export default function VehicleDetailView({
                     </div>
 
                     {mediaMode === "images" ? (
-                      <motion.img
-                        key={selectedGalleryImg}
-                        initial={{ opacity: 0.8 }}
-                        animate={{ opacity: 1 }}
-                        src={selectedGalleryImg}
-                        alt={`${car.brand} ${car.model}`}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
+                      selectedGalleryImg ? (
+                        <motion.img
+                          key={selectedGalleryImg}
+                          initial={{ opacity: 0.8 }}
+                          animate={{ opacity: 1 }}
+                          src={selectedGalleryImg}
+                          alt={`${car.brand} ${car.model}`}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-stone-900 flex items-center justify-center text-stone-500 font-mono text-sm uppercase">
+                          No Image Available
+                        </div>
+                      )
                     ) : car.spinImages && car.spinImages.length > 0 ? (
                       !spinImagesLoaded ? (
                         <div className="w-full h-full relative flex items-center justify-center bg-stone-900 flex-col">
